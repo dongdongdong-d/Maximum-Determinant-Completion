@@ -50,3 +50,9 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+maxdet_completion.c~
+
+read_and_complete
+
+read_and_complete2
