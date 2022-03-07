@@ -16,9 +16,9 @@ void completion_one(gsl_matrix * M_target, int col, int row, int *nei, int num_n
 	} else {
 		int i, j;
 		double temp;
-		gsl_matrix *C = gsl_matrix_alloc(num_nei, num_nei);
-		gsl_vector *B = gsl_vector_alloc(num_nei);
-		gsl_vector *D = gsl_vector_alloc(num_nei);
+		gsl_matrix *C = gsl_matrix_calloc(num_nei, num_nei);
+		gsl_vector *B = gsl_vector_calloc(num_nei);
+		gsl_vector *D = gsl_vector_calloc(num_nei);
 		for (i = 0; i < num_nei; i++) {
 			gsl_vector_set(B, i, gsl_matrix_get(M_target, col, nei[i]));
 			gsl_vector_set(D, i, gsl_matrix_get(M_target, row, nei[i]));
@@ -34,8 +34,6 @@ void completion_one(gsl_matrix * M_target, int col, int row, int *nei, int num_n
 		gsl_blas_ddot(B, D, &temp);
 		gsl_matrix_set(M_target, col, row, temp);
 		gsl_matrix_set(M_target, row, col, temp);
-
-
 		gsl_matrix_free(C);
 		gsl_vector_free(B);
 		gsl_vector_free(D);
@@ -46,17 +44,16 @@ void schur_complement(gsl_matrix * M, gsl_matrix * M_remained, gsl_matrix * M_re
 		      int dim_full)
 {
 	int col, row, i, j;
-	double temp;
-	gsl_matrix *C = gsl_matrix_alloc(dim_full, dim_full);
-	gsl_matrix *B = gsl_matrix_alloc(dim_remained, dim_full);
-	gsl_matrix *BT = gsl_matrix_alloc(dim_full, dim_remained);
+	gsl_matrix *C = gsl_matrix_calloc(dim_full, dim_full);
+	gsl_matrix *B = gsl_matrix_calloc(dim_remained, dim_full);
+	gsl_matrix *BT = gsl_matrix_calloc(dim_full, dim_remained);
+	
 	for (i = 0; i < dim_remained; i++) {
 		for (j = 0; j < dim_full; j++) {
 			row = reduced_idx[i];
 			col = full_idx[j];
-			temp = gsl_matrix_get(M, row, col);
-			gsl_matrix_set(B, i, j, temp);
-			gsl_matrix_set(BT, j, i, temp);
+			gsl_matrix_set(B, i, j, gsl_matrix_get(M, row, col));
+			gsl_matrix_set(BT, j, i, gsl_matrix_get(M, row, col));
 		}
 	}
 
@@ -64,8 +61,7 @@ void schur_complement(gsl_matrix * M, gsl_matrix * M_remained, gsl_matrix * M_re
 		for (j = 0; j < dim_full; j++) {
 			row = full_idx[i];
 			col = full_idx[j];
-			temp = gsl_matrix_get(M, row, col);
-			gsl_matrix_set(C, i, j, temp);
+			gsl_matrix_set(C, i, j, gsl_matrix_get(M, row, col));
 		}
 	}
 
@@ -78,9 +74,8 @@ void schur_complement(gsl_matrix * M, gsl_matrix * M_remained, gsl_matrix * M_re
 		for (j = i; j < dim_remained; j++) {
 			row = reduced_idx[i];
 			col = reduced_idx[j];
-			temp = gsl_matrix_get(M, row, col) - gsl_matrix_get(M_reducer, i, j);
-			gsl_matrix_set(M_remained, i, j, temp);
-			gsl_matrix_set(M_remained, j, i, temp);
+			gsl_matrix_set(M_remained, i, j, gsl_matrix_get(M, row, col) - gsl_matrix_get(M_reducer, i, j));
+			gsl_matrix_set(M_remained, j, i, gsl_matrix_get(M, row, col) - gsl_matrix_get(M_reducer, i, j));
 		}
 	}
 
@@ -89,21 +84,15 @@ void schur_complement(gsl_matrix * M, gsl_matrix * M_remained, gsl_matrix * M_re
 	gsl_matrix_free(BT);
 }
 
-void MCS_seach_chordal_check(int *alpha, int *alpha_inv, int **adj, int dim_remained, int *num_fill_in, int *fill_in)
+void MCS_seach_chordal_check(int *alpha, int *alpha_inv, char **adj, int dim_remained, int *num_fill_in, int *fill_in)
 {
-	int **set = malloc(sizeof(int *) * dim_remained);
-	int *size = malloc(sizeof(int) * dim_remained);
-	int *f = malloc(sizeof(int) * dim_remained);
-	int *idx = malloc(sizeof(int) * dim_remained);
+	char **set = (char**) calloc(dim_remained,sizeof(char *));
+	char *workspace = (char*) calloc(dim_remained*dim_remained,sizeof(char));
+	int *size = (int*) calloc(dim_remained*2,sizeof(int));
+	
 	int v, w, x, current_order, current_weight_level = 0, is_level_active;
 	for (v = 0; v < dim_remained; v++) {
-		set[v] = malloc(sizeof(int) * dim_remained);
-		size[v] = 0;
-		f[v] = 0;
-		idx[v] = 0;
-		for (w = 0; w < dim_remained; w++) {
-			set[v][w] = 0;
-		}
+		set[v] = workspace + dim_remained + v * dim_remained;
 		set[0][v] = 1;
 	}
 
@@ -141,7 +130,8 @@ void MCS_seach_chordal_check(int *alpha, int *alpha_inv, int **adj, int dim_rema
 		}
 	}
 
-
+	int *f = size;
+	int *idx = size + dim_remained;
 	*num_fill_in = 0;
 	for (current_order = 0; current_order < dim_remained; current_order++) {
 		w = alpha_inv[current_order];
@@ -169,23 +159,15 @@ void MCS_seach_chordal_check(int *alpha, int *alpha_inv, int **adj, int dim_rema
 	*num_fill_in = (*num_fill_in + 1) / 2;
 
 
-	free(f);
-	free(idx);
-	for (v = 0; v < dim_remained; v++) {
-		free(set[v]);
-	}
-	free(set);
 	free(size);
+	free(set);
+	free(workspace);
 }
 
-//This method seems not good.
-void BK(int *R, int *P, int *X, int **adj, int length, int **R_res, int *count)
+void BK(char *R, char *P, char *X, char **adj, int length, char **R_res, int *count, int max_cliques)
 {
 	int R_sum = 0, P_sum = 0, X_sum = 0;
 	int i, v, u, u_nbs, u_pivot = 0, u_pivot_nbs;
-	int *R_new = NULL;
-	int *P_new = NULL;
-	int *X_new = NULL;
 	for (int i = 0; i < length; i++) {
 		R_sum += R[i];
 		P_sum += P[i];
@@ -193,11 +175,14 @@ void BK(int *R, int *P, int *X, int **adj, int length, int **R_res, int *count)
 	}
 
 	if (P_sum == 0 && X_sum == 0) {
-		R_res[*count] = R;
-		*count = *count + 1;
-		//if (P) free(P);
-		//if (X) free(X);
-	} else {
+		if(*count<max_cliques){
+			R_res[*count] = R;
+			*count = *count + 1;
+		}else{
+			free(R);
+		}
+		
+	} else if(*count<max_cliques){
 		u_pivot_nbs = -1;
 		for (u = 0; u < length; u++) {
 			if (P[u] == 1 || X[u] == 1) {
@@ -213,26 +198,26 @@ void BK(int *R, int *P, int *X, int **adj, int length, int **R_res, int *count)
 		}
 		for (v = 0; v < length; v++) {
 			if (P[v] == 1 && adj[u_pivot][v] == 0) {
-				R_new = (int *) calloc(3 * length, sizeof(int));
-				P_new = R_new + length;
-				X_new = R_new + 2 * length;
-				memcpy(R_new, R, length*sizeof(int));
+				char *R_new = (char *) calloc(3 * length, sizeof(char));
+				char *P_new = R_new + length;
+				char *X_new = R_new + 2 * length;
+				memcpy(R_new, R, length*sizeof(char));
 				for (i = 0; i < length; i++) {
-					//R_new[i] = R[i];
 					P_new[i] = (P[i] == 1 && adj[v][i] == 1);
 					X_new[i] = (X[i] == 1 && adj[v][i] == 1);
 				}
 				R_new[v] = 1;
-				BK(R_new, P_new, X_new, adj, length, R_res, count);
+				BK(R_new, P_new, X_new, adj, length, R_res, count,max_cliques);
 				P[v] = 0;
 				X[v] = 1;
-				//free(R_new);
 			}
 		}
-		free(R); R = NULL;
+		free(R);
+	} else{
+		free(R);
 	}
 }
-void guess_fill_in(gsl_matrix * M_target, int col, int row, int *nei, int **adj)
+void guess_fill_in(gsl_matrix * M_target, int col, int row, int *nei, char **adj)
 {
 	int i, j;
 	int num_nei = 0;
@@ -244,17 +229,17 @@ void guess_fill_in(gsl_matrix * M_target, int col, int row, int *nei, int **adj)
 		}
 	}
 
-	int **adj_sub = malloc(sizeof(int *) * num_nei);
-	int **R_res = malloc(sizeof(int **) * 100);	       // It should be changed to a linked list.
 	int R_count = 0;
-	int *R = malloc(sizeof(int) * num_nei);
-	int *P = malloc(sizeof(int) * num_nei);
-	int *X = malloc(sizeof(int) * num_nei);
+	int max_cliques = 3 * num_nei;			// Bound the recursion by 3*num_nei.Theoretically it can go 3^(3/num_nei).
+	char **adj_sub = (char **) calloc(num_nei, sizeof(char *));
+	char *adj_store = (char*) calloc(num_nei*num_nei, sizeof(char));
+	char **R_res = (char**) calloc(max_cliques, sizeof(char *));	       
+	char *R = (char*) calloc(num_nei * 3, sizeof(char));
+	char *P = R + num_nei;
+	char *X = R + 2*num_nei;
 	for (i = 0; i < num_nei; i++) {
-		R[i] = 0;
 		P[i] = 1;
-		X[i] = 0;
-		adj_sub[i] = malloc(sizeof(int) * num_nei);
+		adj_sub[i] = adj_store + i*num_nei;
 		for (j = 0; j < num_nei; j++) {
 			adj_sub[i][j] = adj[nei[i]][nei[j]];
 			if (j == i) {
@@ -262,12 +247,11 @@ void guess_fill_in(gsl_matrix * M_target, int col, int row, int *nei, int **adj)
 			}
 		}
 	}
-	BK(R, P, X, adj_sub, num_nei, R_res, &R_count);
+	BK(R, P, X, adj_sub, num_nei, R_res, &R_count,max_cliques);
 	// ##### linear algebra part starts
 	int dim_clique, current_clique, dim_sub, signum;
 	int *current_clique_idx;
 	gsl_matrix *sub;
-	// gsl_matrix* sub_inv;
 	gsl_permutation *p;
 	gsl_vector *e;
 	double temp, b, a, delta, right = 1000, left = -1000, right_new, left_new, inv_11, inv_22, inv_12;
@@ -279,19 +263,19 @@ void guess_fill_in(gsl_matrix * M_target, int col, int row, int *nei, int **adj)
 			}
 		}
 		dim_sub = dim_clique + 2;
-		current_clique_idx = malloc(dim_sub * sizeof(int));
+		current_clique_idx = (int *) calloc(dim_sub , sizeof(int));
 		j = 0;
 		for (i = 0; i < num_nei; i++) {
-			if (R_res[current_clique][i] == 1) {
+			if (R_res[current_clique][i]) {
 				current_clique_idx[j] = nei[i];
 				j++;
 			}
 		}
 		current_clique_idx[dim_clique] = row;
 		current_clique_idx[dim_clique + 1] = col;
-		sub = gsl_matrix_alloc(dim_sub, dim_sub);
-		e = gsl_vector_alloc(dim_sub);
-		p = gsl_permutation_alloc(dim_sub);
+		sub = gsl_matrix_calloc(dim_sub, dim_sub);
+		e = gsl_vector_calloc(dim_sub);
+		p = gsl_permutation_calloc(dim_sub);
 		for (i = 0; i < dim_sub; i++) {
 			for (j = i; j < dim_sub; j++) {
 				temp = gsl_matrix_get(M_target, current_clique_idx[i], current_clique_idx[j]);
@@ -310,7 +294,6 @@ void guess_fill_in(gsl_matrix * M_target, int col, int row, int *nei, int **adj)
 		gsl_vector_set_basis(e, dim_clique + 1);
 		gsl_linalg_LU_svx(sub, p, e);
 		inv_22 = gsl_vector_get(e, dim_clique + 1);
-		// gsl_linalg_LU_invert(sub,p,sub_inv);
 		b = 2 * inv_12;
 		a = inv_12 * inv_12 - inv_11 * inv_22;
 		delta = 4 * inv_11 * inv_22;
@@ -353,64 +336,15 @@ void guess_fill_in(gsl_matrix * M_target, int col, int row, int *nei, int **adj)
 		free(R_res[i]);
 	}
 	free(R_res);
-	for (i = 0; i < num_nei; i++) {
-		free(adj_sub[i]);
-	}
+	free(adj_store);
 	free(adj_sub);
-}
-
-void guess_fill_in2(gsl_matrix * M_target, int col, int row, int *nei, int *nnbs, int **adj)
-{
-	int i, j;
-	int num_nei = 0;
-	int dim = M_target->size1;
-	for (i = 0; i < dim; i++) {
-		if (adj[row][i] && adj[col][i]) {
-			nei[num_nei] = i;
-			num_nei = num_nei + 1;
-		}
-	}
-
-	int minimum_nbs = num_nei;
-	int minimum_nbs_idx = num_nei;
-
-	for (i = 0; i < num_nei; i++) {
-		nnbs[i] = 0;
-		for (j = 0; j < num_nei; j++) {
-			nnbs[i] = nnbs[i] + adj[nei[i]][nei[j]];
-		}
-		if (minimum_nbs > nnbs[i]) {
-			minimum_nbs = nnbs[i];
-			minimum_nbs_idx = i;
-		}
-	}
-
-	while (minimum_nbs < num_nei) {
-		for (j = minimum_nbs_idx; j < num_nei; j++) {
-			nei[j] = nei[j + 1];
-		}
-		num_nei = num_nei - 1;
-		minimum_nbs = num_nei;
-		for (i = 0; i < num_nei; i++) {
-			nnbs[i] = 0;
-			for (j = 0; j < num_nei; j++) {
-				nnbs[i] = nnbs[i] + adj[nei[i]][nei[j]];
-			}
-			if (minimum_nbs > nnbs[i]) {
-				minimum_nbs = nnbs[i];
-				minimum_nbs_idx = i;
-			}
-		}
-	}
-
-	completion_one(M_target, row, col, nei, num_nei);
 }
 
 
 void optim_newton(gsl_matrix * M, gsl_matrix * workspace, int empty_length, int *empty_idx, int iter_max, double tol)
 {
-	gsl_vector *df = gsl_vector_alloc(empty_length);
-	gsl_matrix *ddf = gsl_matrix_alloc(empty_length, empty_length);
+	gsl_vector *df = gsl_vector_calloc(empty_length);
+	gsl_matrix *ddf = gsl_matrix_calloc(empty_length, empty_length);
 	double x_temp;
 	double df_norm_now = tol + 1;
 	int i, j, coli, rowi, colj, rowj, iter = 0;
@@ -460,8 +394,8 @@ void make_psd(gsl_matrix * M, gsl_matrix * workspace, int empty_length, int *emp
 	int dim = M->size1, iter_now = 0;
 	double shift, shift_up_cum, shift_down_cum = 0;
 	gsl_eigen_symm_workspace *eigen_workspace = gsl_eigen_symm_alloc(dim);
-	gsl_vector *eigen_values = gsl_vector_alloc(dim);
-	double *diag_origin = malloc(dim * sizeof(double));
+	gsl_vector *eigen_values = gsl_vector_calloc(dim);
+	double *diag_origin = (double*) calloc(dim, sizeof(double));
 	gsl_matrix_memcpy(workspace, M);
 	gsl_eigen_symm(workspace, eigen_values, eigen_workspace);
 	gsl_sort_vector(eigen_values);
@@ -502,7 +436,7 @@ void make_psd(gsl_matrix * M, gsl_matrix * workspace, int empty_length, int *emp
 
 }
 
-void chordal_completion(gsl_matrix * M_remained, int dim_remained, int *alpha_inv, int *nei, int **adj)
+void chordal_completion(gsl_matrix * M_remained, int dim_remained, int *alpha_inv, int *nei, char **adj)
 {
 	int col, row, i, j, k, ii;
 	for (i = dim_remained - 1; i >= 0; i--) {
@@ -529,8 +463,8 @@ void matrix_completion(gsl_matrix * M)
 {
 	gsl_set_error_handler_off();
 	int dim = M->size1, dim_remained = 0, dim_full = 0, i = 0, j = 0, k = 0;
-	int *reduced_idx = malloc(dim * sizeof(int));
-	int *full_idx = malloc(dim * sizeof(int));
+	int *reduced_idx = (int*) calloc(2*dim, sizeof(int));
+	int *full_idx = reduced_idx + dim;
 	for (i = 0; i < dim; i++) {
 		for (j = 0; j < dim; j++) {
 			if (gsl_isnan(gsl_matrix_get(M, i, j))) {
@@ -551,17 +485,17 @@ void matrix_completion(gsl_matrix * M)
 		} else {
 			int empty_length = 0, col = 0, row = 0;
 			double temp;
-			int **adj = malloc(sizeof(int *) * dim_remained);
+			char **adj = (char**) calloc(dim_remained, sizeof(char *));
+			char* adj_store = (char*) calloc(dim_remained*dim_remained, sizeof(char *));
 			int *empty_idx = NULL;
-			int *nei = malloc(sizeof(int) * dim_remained);
-			gsl_matrix *M_reducer = gsl_matrix_alloc(dim_remained, dim_remained);
-			gsl_matrix *M_remained = gsl_matrix_alloc(dim_remained, dim_remained);
+			int *nei = (int*) calloc(dim_remained, sizeof(int));
+			gsl_matrix *M_reducer = gsl_matrix_calloc(dim_remained, dim_remained);
+			gsl_matrix *M_remained = gsl_matrix_calloc(dim_remained, dim_remained);
 			schur_complement(M, M_remained, M_reducer, reduced_idx, full_idx, dim_remained, dim_full);
 			for (i = 0; i < dim_remained; i++) {
-				adj[i] = malloc(sizeof(int) * dim_remained);
+				adj[i] = adj_store + i * dim_remained;
 				for (j = 0; j < dim_remained; j++) {
 					if (gsl_isnan(gsl_matrix_get(M_remained, i, j))) {
-						adj[i][j] = 0;
 						empty_length = empty_length + 1;
 					} else {
 						adj[i][j] = 1;
@@ -569,7 +503,7 @@ void matrix_completion(gsl_matrix * M)
 				}
 			}
 
-			empty_idx = malloc(sizeof(int) * empty_length);
+			empty_idx =  (int*) calloc(empty_length, sizeof(int));
 			empty_length = empty_length / 2;
 			for (i = 0; i < dim_remained; i++) {
 				for (j = i; j < dim_remained; j++) {
@@ -596,14 +530,14 @@ void matrix_completion(gsl_matrix * M)
 					completion_one(M_remained, row, col, nei, k);
 				}
 			} else {
-				int *alpha = malloc(sizeof(int) * dim_remained);
-				int *alpha_inv = malloc(sizeof(int) * dim_remained);
-				int *fill_in = malloc(sizeof(int) * empty_length * 2);
+				int *alpha = (int*) calloc(2 * dim_remained, sizeof(int));
+				int *alpha_inv = alpha + dim_remained;
+				int *fill_in = (int *) calloc(empty_length * 2, sizeof(int));
 				int num_fill_in;
 				MCS_seach_chordal_check(alpha, alpha_inv, adj, dim_remained, &num_fill_in, fill_in);
 
 				if (num_fill_in > 0) {
-					gsl_matrix *workspace_chol = gsl_matrix_alloc(dim_remained, dim_remained);
+					gsl_matrix *workspace_chol = gsl_matrix_calloc(dim_remained, dim_remained);
 					for (i = 0; i < num_fill_in; i++) {
 						row = fill_in[2 * i];
 						col = fill_in[2 * i + 1];
@@ -633,7 +567,6 @@ void matrix_completion(gsl_matrix * M)
 
 				free(fill_in);
 				free(alpha);
-				free(alpha_inv);
 			}
 
 			for (i = 0; i < empty_length; i++) {
@@ -643,9 +576,8 @@ void matrix_completion(gsl_matrix * M)
 				gsl_matrix_set(M, reduced_idx[row], reduced_idx[col], temp);
 				gsl_matrix_set(M, reduced_idx[col], reduced_idx[row], temp);
 			}
-			for (i = 0; i < dim_remained; i++) {
-				free(adj[i]);
-			}
+			
+			free(adj_store);
 			free(nei);
 			free(adj);
 			free(empty_idx);
@@ -654,6 +586,4 @@ void matrix_completion(gsl_matrix * M)
 		}
 	}
 	free(reduced_idx);
-	free(full_idx);
-
 }

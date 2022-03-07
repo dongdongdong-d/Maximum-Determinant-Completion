@@ -1,4 +1,5 @@
-CFLAGS= -Wall -Wextra -O3 -flto=auto -mtune=native 
+CFLAGS= -Wall -Wextra -O3 -flto=auto -mtune=native -static-libasan -fsanitize=address
+##CFLAGS= -Wall -Wextra -O3 -flto=auto -mtune=native
 ##CFLAGS= -Wall -Wextra -pg 
 LDFLAGS= -lgsl -lm -lblas -lgslcblas 
 CC=gcc
