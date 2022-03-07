@@ -7,7 +7,7 @@ MKLROOT=/opt/intel/lib
 MKLLIB= -Wl,--start-group ${MKLROOT}/libmkl_intel_lp64.a ${MKLROOT}/libmkl_sequential.a ${MKLROOT}/libmkl_core.a -Wl,--end-group 
  
 maxdet_completion.o: maxdet_completion.c
-	$(CC) $(CFLAGS)  $(LDFLAGS)  -c $< 
+	$(CC) $(CFLAGS) -c $< 
 
 read_and_complete: read_and_complete.c maxdet_completion.o
 	$(CC) $(CFLAGS)  $^ $(LDFLAGS)  -o $@ 
