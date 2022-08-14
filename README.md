@@ -9,7 +9,7 @@ The general steps of the algorithm are the following:
 4. If the graph is chordal, use the method shown in [2] to complete the matrix.
 5. If the graph is not chordal, do a positive definite completion using the following heuristic way first:
     5.1 Use the chordal completion order obtained in step 3 to make the matrix chordal. If we want to fill in entry (i,j), we consider the largest principal submatrices with an only entry (i,j) unspecified. The determinant of those principal submatrices should be larger than zero. Thus, we can have a set of inequalities to bound the entry (i,j).
-    5.2 The largest principal submatrices are found on the graph. The task is equivalent to finding the largest cliques consisting of shared neighbor nodes of node i and node j. The largest cliques are found by Bron-Kerbosch algorithm with pivoting, where the pivot is the most connected node.[3]
+    5.2 The largest principal submatrices are found on the graph. The task is equivalent to finding the maximal cliques consisting of shared neighbor nodes of node i and node j. The maximal cliques are found by Bron-Kerbosch algorithm with pivoting, where the pivot is the most connected node.[3]
     5.3 Then, apply step 4 to get a matrix completion. If the matrix completion is positive definite, jump to step 7. Otherwise, proceed to step 6.
 6. The matrix is now completed but not positive definite from step 5. We apply the barrier method shown in [4] to get a definite positive completion. The general idea is:
     6.1 Add xI to the matrix, where I is an identity matrix, and x makes the matrix positive definite.
