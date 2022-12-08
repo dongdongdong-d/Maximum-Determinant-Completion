@@ -27,7 +27,11 @@ Some Notes:
 
 
 Reference:
+
 [1]Tarjan, Robert E., and Mihalis Yannakakis. "Simple linear-time algorithms to test chordality of graphs, test acyclicity of hypergraphs, and selectively reduce acyclic hypergraphs." SIAM Journal on computing 13.3 (1984): 566-579.
+
 [2]Grone, Robert, et al. "Positive definite completions of partial Hermitian matrices." Linear algebra and its applications 58 (1984): 109-124.
+
 [3]Tomita, Etsuji, Akira Tanaka, and Haruhisa Takahashi. "The worst-case time complexity for generating all maximal cliques and computational experiments." Theoretical computer science 363.1 (2006): 28-42.
+
 [4]Glunt, W., et al. "Positive definite completions and determinant maximization." Linear algebra and its applications 288 (1999): 1-10.
